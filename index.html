@@ -32,11 +32,57 @@
       color:#fff; font:600 18px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
       letter-spacing:0.5px; text-align:center; user-select:none
     }
+
+    /* Segmented control dock (Apple-style), centered UNDER the clock */
+    #overlay{
+      position:fixed; z-index:12; top:64px; left:50%; transform:translateX(-50%);
+      opacity:0; pointer-events:none; transition:opacity .25s ease;
+    }
+    #tabs{
+      position:relative; display:inline-flex; gap:0; padding:6px; border-radius:16px;
+      background:rgba(255,255,255,0.08);
+      -webkit-backdrop-filter:blur(12px) saturate(140%);
+      backdrop-filter:blur(12px) saturate(140%);
+      box-shadow:0 6px 24px rgba(0,0,0,0.35);
+      border:1px solid rgba(255,255,255,0.18);
+    }
+    .tabbtn{
+      position:relative; z-index:1;
+      min-width:92px; min-height:36px; padding:6px 14px;
+      border:none; border-radius:12px; background:transparent;
+      color:#fff; font:600 14px ui-sans-serif,system-ui; cursor:pointer; user-select:none;
+    }
+    .tabbtn:focus{ outline:2px solid rgba(255,255,255,0.75); outline-offset:2px; border-radius:12px; }
+    .tabbtn[aria-selected="true"]{ color:#000; }
+
+    /* animated thumb behind selected tab */
+    #seg-thumb{
+      position:absolute; top:6px; left:0px; height:36px; width:92px; border-radius:12px;
+      background:rgba(255,255,255,0.9);
+      box-shadow:0 4px 16px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.6);
+      transition:transform .18s ease, width .18s ease;
+      will-change:transform,width;
+    }
+
+    /* show-on-motion */
+    .overlay-visible #overlay{ opacity:1; pointer-events:auto; }
+
+    /* hide old tiny affordance */
+    #hint{ display:none !important; }
   </style>
 </head>
 
 <body>
   <div id="clock">00:00:00</div>
+  <div id="overlay" role="region" aria-label="View switch">
+    <div id="tabs" role="tablist" aria-label="Categories">
+      <span id="seg-thumb" aria-hidden="true"></span>
+      <button id="tab-travel" class="tabbtn" role="tab" aria-selected="false">Travel</button>
+      <button id="tab-homes" class="tabbtn" role="tab" aria-selected="false">Homes</button>
+      <button id="tab-cars" class="tabbtn" role="tab" aria-selected="false">Cars</button>
+    </div>
+  </div>
+  <div id="hint">⋯</div>
   <iframe id="player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
 
   <script>
@@ -153,6 +199,96 @@
         const url = `https://www.youtube.com/embed/${first}?autoplay=1&mute=1&loop=1&playlist=${playlist.join(",")}&start=${approxStart}&controls=1&modestbranding=1&rel=0&disablekb=0&playsinline=1`;
         document.getElementById("player").src = url;
       }
+
+      // ---- Overlay tabs + routing (non-breaking) ----
+        const $player = document.getElementById("player");
+        const tabs = {
+          travel: document.getElementById("tab-travel"),
+          homes: document.getElementById("tab-homes"),
+          cars: document.getElementById("tab-cars"),
+        };
+
+        const thumb = document.getElementById("seg-thumb");
+
+        function _posThumb(btn) {
+          if (!btn || !thumb) return;
+          const w = Math.max(92, Math.ceil(btn.clientWidth));
+          const x = btn.offsetLeft; // correct offset inside #tabs (ignores outer border)
+          thumb.style.width = w + "px";
+          thumb.style.transform = `translateX(${x}px)`;
+        }
+
+        function setList(list, withRandomStart = true) {
+          const first = list[Math.floor(Math.random() * list.length)];
+          const playlist = [first, ...list.filter(v => v !== first)];
+          const approxStart = withRandomStart ? Math.floor(Math.random() * 1200) : 0;
+          const url = `https://www.youtube.com/embed/${first}?autoplay=1&mute=1&loop=1&playlist=${playlist.join(",")}` +
+            `&start=${approxStart}&controls=1&modestbranding=1&rel=0&disablekb=0&playsinline=1`;
+          $player.src = url;
+        }
+        function selectTab(route) {
+            let activeBtn = null;
+            for (const [k, btn] of Object.entries(tabs)) {
+              if (!btn) continue;
+              const sel = (k === route);
+              btn.setAttribute("aria-selected", String(sel));
+              if (sel) activeBtn = btn;
+            }
+            _posThumb(activeBtn || tabs.travel);
+          }
+        function getInitialRoute() {
+          const path = location.pathname.replace(/^\//, '');
+          if (path.startsWith("yt/")) return "yt";
+          if (path === "homes") return "homes";
+          if (path === "cars") return "cars";
+          return "travel";
+        }
+        function setRoute(route) {
+          if (route === "homes") { setList(ROUTES.homes); selectTab("homes"); }
+          else if (route === "cars") { setList(ROUTES.cars); selectTab("cars"); }
+          else {
+            setList(videos); selectTab("travel"); route = "travel";
+          }
+          const newPath = route === "travel" ? "/" : `/${route}`;
+          if (location.pathname !== newPath) { history.replaceState(null, "", newPath); }
+          try { localStorage.setItem("lastRoute", route); } catch { }
+        }
+        // init (safe to run after your existing player setup)
+          const savedRoute = (() => { try { return localStorage.getItem("lastRoute") } catch { return null } })();
+          setRoute(savedRoute || getInitialRoute());
+          _posThumb(document.querySelector('.tabbtn[aria-selected="true"]'));
+          setTimeout(() => document.body.classList.add("overlay-visible"), 300);
+
+          // keep thumb aligned when window resizes
+          window.addEventListener("resize", () => {
+            const active = document.querySelector('.tabbtn[aria-selected="true"]');
+            _posThumb(active || tabs.travel);
+          });
+
+        // click bindings
+        tabs.travel?.addEventListener("click", () => setRoute("travel"));
+        tabs.homes?.addEventListener("click", () => setRoute("homes"));
+        tabs.cars?.addEventListener("click", () => setRoute("cars"));
+
+        // keyboard shortcuts
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "1") setRoute("travel");
+          else if (e.key === "2") setRoute("homes");
+          else if (e.key === "3") setRoute("cars");
+        });
+
+        // motion-reveal overlay
+        let _hideTimer = null;
+        function _showOverlay() {
+          document.body.classList.add("overlay-visible");
+          clearTimeout(_hideTimer);
+          _hideTimer = setTimeout(() => document.body.classList.remove("overlay-visible"), 3500);
+        }
+        ["mousemove", "touchstart", "keydown"].forEach(evt => {
+          document.addEventListener(evt, _showOverlay, { passive: true });
+        });
+        // brief initial reveal for discoverability
+        setTimeout(_showOverlay, 300);
 
     // Clock
     function tick() {
