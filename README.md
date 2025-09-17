@@ -18,8 +18,6 @@ Supports different playlists by URL path (e.g. `/cars`, `/homes`) and single vid
 
 You just need a static file server. Examples:
 
-### Python
-
 ```bash
 # In repo root
 npx serve -s
