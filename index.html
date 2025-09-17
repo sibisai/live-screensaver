@@ -63,8 +63,66 @@
 
     // Optional route-specific lists
       const ROUTES = {
-        cars: [/* put car video IDs here */],
-        homes: [/* put homes/architecture IDs here */]
+        cars: [
+          "iSnP5c997Uk", // S580 Night POV
+          "SknpAR8EPHE", // Chiron SS 4k
+          "goXxK2l1Xs8", // 2021 S class night POV
+          "ueGoScRwCp8", // G80 Autobahn
+          "1fzUnAUarNI", // 812 GTS
+          "kfwE65kJLdI", // F1
+          "c5LeLdbK_-A", // 992 GT3 black forest
+          "_60nMAyzTvY", // 2023 RR Phantom
+          "9MVj1tNvfbA", // GT63s 3am
+          "flwTsM21tc8", // F90 2am
+          "TGDwdVudS6g", // Hurucan Evo night
+          "yj2M_2acsVo", // Revuelto
+          "AUCp86UwI8g", // STO Sunrise
+          "Pkj1qIcK2Y", // GT3RS Alpine 4k
+          "Rmj2Juqk2Rg", // Urus Night 4k
+          "g8hjiOzS2z4", // E36 Rain Mountain
+          "JedCi0pVUQQ", // Chiron SS 4k Blue
+          "FZ6A_4K5uKs", // Turbo S night
+          "0P17KHQk4sM", // G63 2025 4k
+        ],
+        homes: [
+          // "L0nhTU_PPpo", // 30M California Hilltop Mansion
+          // "P4cm24BzCzQ", // 11.5M Calabasas Mega Mansion
+          // "K0lHQTkvUko", // Beverly Hills Gold Mansion
+          "U8Cd_McCdow",
+          "idJthveed1M",
+          "yJ4v-yxuPk8", 
+          "aN9DH_GxqEo",
+          "1lqfF6wOkMc",
+          "AfSWldaT-AE",
+          "bumsIF8hbi0",
+          "Us8mDKUaX2M",
+          "3bNgyOSNH_U",
+          "haZegPp6gck",
+          "Mw_AJOYzt0w",
+          "JpoeEtZCgFA",
+          "j5aFoPmFIT4",
+          "P7iwyVlKV-w",
+          "HCpumIZjY",
+          "jkndHmbN9mc",
+          "01QgNRm2OYg",
+          "gQ--Fpgoo-Q",
+          "1UiokDqeUS0",
+          "AfQOh7h43Yg",
+          "vG5E5rgHpN4",
+          "YRqMf9G3-g8",
+          "a70ro6LkChk",
+          "4IId792kUp0",
+          "ZXbtGiRMwSE",
+          "YHaXs9LFUzY",
+          "BDnx7AvMij8",
+          "lKaTHc-0fR4&t",
+          "PHhuIg6oLC4",
+          "W2-uo7ZdBwI",
+          "j3FaaXf_2iw",
+          "MPvXYcDm6io",
+          "FD54Pd0i3DE",
+          "19iLZbGDbgI",
+        ]
       };
 
       // Extract YT id if path is /yt/<url-or-id>
@@ -84,15 +142,15 @@
       const path = location.pathname.replace(/^\//, ''); // "", "cars", "homes", "yt/..."
       if (path.startsWith("yt/")) {
         const vid = getYouTubeId(decodeURIComponent(path.slice(3))) || videos[0];
-        const url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&loop=1&playlist=${vid}&controls=0&modestbranding=1&rel=0&disablekb=1&playsinline=1`;
+        const url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&loop=1&playlist=${vid}&controls=1&modestbranding=1&rel=0&disablekb=0&playsinline=1`;
         document.getElementById("player").src = url;
       } else {
         const list = ROUTES[path] && ROUTES[path].length ? ROUTES[path] : videos;
         const first = list[Math.floor(Math.random() * list.length)];
         const playlist = [first, ...list.filter(v => v !== first)];
-        const approxStart = Math.floor(Math.random() * 1200); // keep your random start
+        const approxStart = Math.floor(Math.random() * 1200); // random start
 
-        const url = `https://www.youtube.com/embed/${first}?autoplay=1&mute=1&loop=1&playlist=${playlist.join(",")}&start=${approxStart}&controls=0&modestbranding=1&rel=0&disablekb=1&playsinline=1`;
+        const url = `https://www.youtube.com/embed/${first}?autoplay=1&mute=1&loop=1&playlist=${playlist.join(",")}&start=${approxStart}&controls=1&modestbranding=1&rel=0&disablekb=0&playsinline=1`;
         document.getElementById("player").src = url;
       }
 
