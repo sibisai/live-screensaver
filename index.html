@@ -67,8 +67,6 @@
     /* show-on-motion */
     .overlay-visible #overlay{ opacity:1; pointer-events:auto; }
 
-    /* hide old tiny affordance */
-    #hint{ display:none !important; }
   </style>
 </head>
 
@@ -77,12 +75,11 @@
   <div id="overlay" role="region" aria-label="View switch">
     <div id="tabs" role="tablist" aria-label="Categories">
       <span id="seg-thumb" aria-hidden="true"></span>
-      <button id="tab-travel" class="tabbtn" role="tab" aria-selected="false">Travel</button>
-      <button id="tab-homes" class="tabbtn" role="tab" aria-selected="false">Homes</button>
-      <button id="tab-cars" class="tabbtn" role="tab" aria-selected="false">Cars</button>
+      <button id="tab-walk" class="tabbtn" role="tab" aria-selected="false">Walk</button>
+      <button id="tab-homes" class="tabbtn" role="tab" aria-selected="false">Home</button>
+      <button id="tab-drive" class="tabbtn" role="tab" aria-selected="false">Drive</button>
     </div>
   </div>
-  <div id="hint">⋯</div>
   <iframe id="player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
 
   <script>
@@ -109,7 +106,7 @@
 
     // Optional route-specific lists
       const ROUTES = {
-        cars: [
+        drive: [
           "iSnP5c997Uk", // S580 Night POV
           "SknpAR8EPHE", // Chiron SS 4k
           "goXxK2l1Xs8", // 2021 S class night POV
@@ -185,38 +182,30 @@
         return null;
       }
 
-      const path = location.pathname.replace(/^\//, ''); // "", "cars", "homes", "yt/..."
-      if (path.startsWith("yt/")) {
-        const vid = getYouTubeId(decodeURIComponent(path.slice(3))) || videos[0];
-        const url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&loop=1&playlist=${vid}&controls=1&modestbranding=1&rel=0&disablekb=0&playsinline=1`;
-        document.getElementById("player").src = url;
-      } else {
-        const list = ROUTES[path] && ROUTES[path].length ? ROUTES[path] : videos;
-        const first = list[Math.floor(Math.random() * list.length)];
-        const playlist = [first, ...list.filter(v => v !== first)];
-        const approxStart = Math.floor(Math.random() * 1200); // random start
-
-        const url = `https://www.youtube.com/embed/${first}?autoplay=1&mute=1&loop=1&playlist=${playlist.join(",")}&start=${approxStart}&controls=1&modestbranding=1&rel=0&disablekb=0&playsinline=1`;
-        document.getElementById("player").src = url;
-      }
-
       // ---- Overlay tabs + routing (non-breaking) ----
         const $player = document.getElementById("player");
         const tabs = {
-          travel: document.getElementById("tab-travel"),
+          walk: document.getElementById("tab-walk"),
           homes: document.getElementById("tab-homes"),
-          cars: document.getElementById("tab-cars"),
+          drive: document.getElementById("tab-drive"),
         };
 
         const thumb = document.getElementById("seg-thumb");
 
         function _posThumb(btn) {
           if (!btn || !thumb) return;
-          const w = Math.max(92, Math.ceil(btn.clientWidth));
-          const x = btn.offsetLeft; // correct offset inside #tabs (ignores outer border)
+          const w = btn.offsetWidth;       // includes padding
+          const x = btn.offsetLeft;        // from tabs' padding edge
           thumb.style.width = w + "px";
           thumb.style.transform = `translateX(${x}px)`;
         }
+
+        if (document.fonts?.ready) {
+            document.fonts.ready.then(() => {
+              const active = document.querySelector('.tabbtn[aria-selected="true"]');
+              _posThumb(active || tabs.walk);
+            });
+          }
 
         function setList(list, withRandomStart = true) {
           const first = list[Math.floor(Math.random() * list.length)];
@@ -234,22 +223,30 @@
               btn.setAttribute("aria-selected", String(sel));
               if (sel) activeBtn = btn;
             }
-            _posThumb(activeBtn || tabs.travel);
+            _posThumb(activeBtn || tabs.walk);
           }
         function getInitialRoute() {
           const path = location.pathname.replace(/^\//, '');
           if (path.startsWith("yt/")) return "yt";
           if (path === "homes") return "homes";
-          if (path === "cars") return "cars";
-          return "travel";
+          if (path === "drive") return "drive";
+          return "walk";
         }
         function setRoute(route) {
+          if (route === "yt") {
+            const idPart = location.pathname.replace(/^\/yt\//, ""); // remove leading "/yt/"
+            const vid = getYouTubeId(decodeURIComponent(idPart)) || videos[0];
+            const url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&loop=1&playlist=${vid}&controls=1&modestbranding=1&rel=0&disablekb=0&playsinline=1`;
+            $player.src = url;
+            selectTab("walk");
+            return;
+        }
+
           if (route === "homes") { setList(ROUTES.homes); selectTab("homes"); }
-          else if (route === "cars") { setList(ROUTES.cars); selectTab("cars"); }
-          else {
-            setList(videos); selectTab("travel"); route = "travel";
-          }
-          const newPath = route === "travel" ? "/" : `/${route}`;
+          else if (route === "drive") { setList(ROUTES.drive); selectTab("drive"); }
+          else { setList(videos); selectTab("walk"); route = "walk"; }
+
+          const newPath = route === "walk" ? "/" : `/${route}`;
           if (location.pathname !== newPath) { history.replaceState(null, "", newPath); }
           try { localStorage.setItem("lastRoute", route); } catch { }
         }
@@ -262,19 +259,19 @@
           // keep thumb aligned when window resizes
           window.addEventListener("resize", () => {
             const active = document.querySelector('.tabbtn[aria-selected="true"]');
-            _posThumb(active || tabs.travel);
+            _posThumb(active || tabs.walk);
           });
 
         // click bindings
-        tabs.travel?.addEventListener("click", () => setRoute("travel"));
+        tabs.walk?.addEventListener("click", () => setRoute("walk"));
         tabs.homes?.addEventListener("click", () => setRoute("homes"));
-        tabs.cars?.addEventListener("click", () => setRoute("cars"));
+        tabs.drive?.addEventListener("click", () => setRoute("drive"));
 
         // keyboard shortcuts
         document.addEventListener("keydown", (e) => {
-          if (e.key === "1") setRoute("travel");
+          if (e.key === "1") setRoute("walk");
           else if (e.key === "2") setRoute("homes");
-          else if (e.key === "3") setRoute("cars");
+          else if (e.key === "3") setRoute("drive");
         });
 
         // motion-reveal overlay
