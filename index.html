@@ -33,24 +33,57 @@
       letter-spacing:0.5px; text-align:center; user-select:none
     }
 
+      #tabs::before{
+        content:"";
+        position:absolute; inset:0; border-radius:inherit; z-index:0;
+        -webkit-backdrop-filter: blur(6px);  /* add this */
+        backdrop-filter: blur(6px);
+        filter: url(#glass-distortion) saturate(120%) brightness(1.12);
+        pointer-events:none;
+      }
+
+      /* Layer 2: translucent fill */
+      #tabs::after{
+        content:"";
+        position:absolute; inset:0; border-radius:inherit;
+        z-index:1;
+        background: rgba(255,255,255,0.18);
+        pointer-events:none;
+      }
+
+
+
+      #tabs{
+        position:relative; display:inline-flex; gap:0; padding:6px; border-radius:16px;
+        overflow:hidden;                 /* move here */
+        isolation:isolate;               /* move here */
+        border:1px solid rgba(255,255,255,0.18);
+        box-shadow:
+          inset 1px 1px 1px rgba(255,255,255,0.55),
+          0 6px 24px rgba(0,0,0,0.35);
+        /* remove the old background + backdrop-filter lines on #tabs */
+      }
+
+      /* Ensure buttons and thumb sit above layers */
+      .tabbtn, #seg-thumb{ position:relative; z-index:2; }
+
+      /* Optional: darker scheme tweak */
+      @media (prefers-color-scheme: dark){
+        #tabs::after{ background: rgba(0,0,0,0.22); }
+      }
+
     /* Segmented control dock (Apple-style), centered UNDER the clock */
     #overlay{
       position:fixed; z-index:12; top:64px; left:50%; transform:translateX(-50%);
       opacity:0; pointer-events:none; transition:opacity .25s ease;
     }
-    #tabs{
-      position:relative; display:inline-flex; gap:0; padding:6px; border-radius:16px;
-      background:rgba(255,255,255,0.08);
-      -webkit-backdrop-filter:blur(12px) saturate(140%);
-      backdrop-filter:blur(12px) saturate(140%);
-      box-shadow:0 6px 24px rgba(0,0,0,0.35);
-      border:1px solid rgba(255,255,255,0.18);
-    }
+
     .tabbtn{
       position:relative; z-index:1;
       min-width:92px; min-height:36px; padding:6px 14px;
       border:none; border-radius:12px; background:transparent;
       color:#fff; font:600 14px ui-sans-serif,system-ui; cursor:pointer; user-select:none;
+      z-index:2;
     }
     .tabbtn:focus{ outline:2px solid rgba(255,255,255,0.75); outline-offset:2px; border-radius:12px; }
     .tabbtn[aria-selected="true"]{ color:#000; }
@@ -62,6 +95,8 @@
       box-shadow:0 4px 16px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.6);
       transition:transform .18s ease, width .18s ease;
       will-change:transform,width;
+
+      z-index:2;
     }
 
     /* show-on-motion */
@@ -71,6 +106,12 @@
 </head>
 
 <body>
+    <svg style="position:absolute; width:0; height:0;">
+      <filter id="glass-distortion">
+        <feTurbulence type="turbulence" baseFrequency="0.008" numOctaves="2" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="77" />
+      </filter>
+    </svg>
   <div id="clock">00:00:00</div>
   <div id="overlay" role="region" aria-label="View switch">
     <div id="tabs" role="tablist" aria-label="Categories">
