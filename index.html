@@ -76,7 +76,7 @@
     <div id="tabs" role="tablist" aria-label="Categories">
       <span id="seg-thumb" aria-hidden="true"></span>
       <button id="tab-walk" class="tabbtn" role="tab" aria-selected="false">Walk</button>
-      <button id="tab-homes" class="tabbtn" role="tab" aria-selected="false">Home</button>
+      <button id="tab-home" class="tabbtn" role="tab" aria-selected="false">Home</button>
       <button id="tab-drive" class="tabbtn" role="tab" aria-selected="false">Drive</button>
     </div>
   </div>
@@ -127,7 +127,7 @@
           "FZ6A_4K5uKs", // Turbo S night
           "0P17KHQk4sM", // G63 2025 4k
         ],
-        homes: [
+        home: [
           // "L0nhTU_PPpo", // 30M California Hilltop Mansion
           // "P4cm24BzCzQ", // 11.5M Calabasas Mega Mansion
           // "K0lHQTkvUko", // Beverly Hills Gold Mansion
@@ -200,7 +200,7 @@
         const $player = document.getElementById("player");
         const tabs = {
           walk: document.getElementById("tab-walk"),
-          homes: document.getElementById("tab-homes"),
+          home: document.getElementById("tab-home"),
           drive: document.getElementById("tab-drive"),
         };
 
@@ -242,7 +242,7 @@
         function getInitialRoute() {
             if (getYTFromURL()) return "yt";
             const path = location.pathname.replace(/^\//, '');
-            if (path === "homes") return "homes";
+            if (path === "home") return "home";
             if (path === "drive") return "drive";
             return "walk";
           }
@@ -268,7 +268,7 @@
             return; // keep whatever URL form was used
           }
 
-          if (route === "homes") { clearYTFromURL(); setList(ROUTES.homes); selectTab("homes"); }
+          if (route === "home") { clearYTFromURL(); setList(ROUTES.home); selectTab("home"); }
           else if (route === "drive") { clearYTFromURL(); setList(ROUTES.drive); selectTab("drive"); }
           else { clearYTFromURL(); setList(videos); selectTab("walk"); route = "walk"; }
 
@@ -291,13 +291,13 @@
 
         // click bindings
         tabs.walk?.addEventListener("click", () => setRoute("walk"));
-        tabs.homes?.addEventListener("click", () => setRoute("homes"));
+        tabs.home?.addEventListener("click", () => setRoute("home"));
         tabs.drive?.addEventListener("click", () => setRoute("drive"));
 
         // keyboard shortcuts
         document.addEventListener("keydown", (e) => {
           if (e.key === "1") setRoute("walk");
-          else if (e.key === "2") setRoute("homes");
+          else if (e.key === "2") setRoute("home");
           else if (e.key === "3") setRoute("drive");
         });
 
