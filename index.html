@@ -35,6 +35,10 @@
       user-select:none;
       overflow:hidden;
       isolation:isolate;   /* needed for layers */
+      border:1px solid rgba(255,255,255,0.18);
+      box-shadow:
+        inset 1px 1px 1px rgba(255,255,255,0.55),
+        0 6px 24px rgba(0,0,0,0.35);
     }
 
     /* Layer 1: blur + distortion */
@@ -100,6 +104,7 @@
       /* Optional: darker scheme tweak */
       @media (prefers-color-scheme: dark){
         #tabs::after{ background: rgba(0,0,0,0.22); }
+        #clock::after{ background: rgba(0,0,0,0.22); }
       }
 
     /* Segmented control dock (Apple-style), centered UNDER the clock */
