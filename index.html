@@ -168,7 +168,21 @@
         ]
       };
 
-      // Extract YT id if path is /yt/<url-or-id>
+      function getYTFromURL() {
+          const h = location.hash.startsWith('#yt=') ? decodeURIComponent(location.hash.slice(4)) : null;
+          if (h) return h;
+          const qs = new URLSearchParams(location.search).get('yt');
+          return qs ? decodeURIComponent(qs) : null;
+        }
+
+      function clearYTFromURL() {
+          const url = new URL(location.href);
+          url.hash = "";
+          url.searchParams.delete("yt");
+          history.replaceState(null, "", url);
+        }
+
+      // Extract YT id from full URLs or plain IDs
       function getYouTubeId(input) {
         if (!input) return null;
         if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
@@ -226,25 +240,37 @@
             _posThumb(activeBtn || tabs.walk);
           }
         function getInitialRoute() {
-          const path = location.pathname.replace(/^\//, '');
-          if (path.startsWith("yt/")) return "yt";
-          if (path === "homes") return "homes";
-          if (path === "drive") return "drive";
-          return "walk";
-        }
+            if (getYTFromURL()) return "yt";
+            const path = location.pathname.replace(/^\//, '');
+            if (path === "homes") return "homes";
+            if (path === "drive") return "drive";
+            return "walk";
+          }
+
+       window.addEventListener("popstate", () => {
+          const yt = getYTFromURL();
+          if (yt) setRoute("yt");
+          else setRoute(getInitialRoute());
+        });
+
+        window.addEventListener("hashchange", () => {
+            if (getYTFromURL()) setRoute("yt");
+          });
+
+
         function setRoute(route) {
           if (route === "yt") {
-            const idPart = location.pathname.replace(/^\/yt\//, ""); // remove leading "/yt/"
-            const vid = getYouTubeId(decodeURIComponent(idPart)) || videos[0];
+            const raw = getYTFromURL();
+            const vid = getYouTubeId(raw) || videos[0];
             const url = `https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&loop=1&playlist=${vid}&controls=1&modestbranding=1&rel=0&disablekb=0&playsinline=1`;
             $player.src = url;
             selectTab("walk");
-            return;
-        }
+            return; // keep whatever URL form was used
+          }
 
-          if (route === "homes") { setList(ROUTES.homes); selectTab("homes"); }
-          else if (route === "drive") { setList(ROUTES.drive); selectTab("drive"); }
-          else { setList(videos); selectTab("walk"); route = "walk"; }
+          if (route === "homes") { clearYTFromURL(); setList(ROUTES.homes); selectTab("homes"); }
+          else if (route === "drive") { clearYTFromURL(); setList(ROUTES.drive); selectTab("drive"); }
+          else { clearYTFromURL(); setList(videos); selectTab("walk"); route = "walk"; }
 
           const newPath = route === "walk" ? "/" : `/${route}`;
           if (location.pathname !== newPath) { history.replaceState(null, "", newPath); }
@@ -252,7 +278,8 @@
         }
         // init (safe to run after your existing player setup)
           const savedRoute = (() => { try { return localStorage.getItem("lastRoute") } catch { return null } })();
-          setRoute(savedRoute || getInitialRoute());
+          const initialRoute = getYTFromURL() ? "yt" : (savedRoute || getInitialRoute());
+            setRoute(initialRoute);
           _posThumb(document.querySelector('.tabbtn[aria-selected="true"]'));
           setTimeout(() => document.body.classList.add("overlay-visible"), 300);
 
