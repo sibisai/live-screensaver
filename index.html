@@ -22,15 +22,45 @@
 
     /* Glass clock */
     #clock{
-      position:fixed; z-index:10; top:16px; left:50%; transform:translateX(-50%);
-      padding:10px 18px; border-radius:16px;
-      background:rgba(255,255,255,0.08);
-      -webkit-backdrop-filter:blur(12px) saturate(140%);
-      backdrop-filter:blur(12px) saturate(140%);
-      /* border:1px solid rgba(255,255,255,0.24); */
-      box-shadow:0 6px 24px rgba(0,0,0,0.35);
-      color:#fff; font:600 18px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
-      letter-spacing:0.5px; text-align:center; user-select:none
+      position:fixed;
+      z-index:10;
+      top:16px; left:50%;
+      transform:translateX(-50%);
+      padding:10px 18px;
+      border-radius:16px;
+      color:#fff;
+      font:600 18px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing:0.5px;
+      text-align:center;
+      user-select:none;
+      overflow:hidden;
+      isolation:isolate;   /* needed for layers */
+    }
+
+    /* Layer 1: blur + distortion */
+    #clock::before{
+      content:"";
+      position:absolute; inset:0; border-radius:inherit;
+      -webkit-backdrop-filter:blur(6px);
+      backdrop-filter:blur(6px);
+      filter:url(#glass-distortion) saturate(120%) brightness(1.12);
+      pointer-events:none;
+      z-index:0;
+    }
+
+    /* Layer 2: translucent tint */
+    #clock::after{
+      content:"";
+      position:absolute; inset:0; border-radius:inherit;
+      background:rgba(255,255,255,0.18);
+      pointer-events:none;
+      z-index:1;
+    }
+
+    /* Keep text above */
+    #clock span{
+      position:relative;
+      z-index:2;
     }
 
       #tabs::before{
@@ -112,7 +142,7 @@
         <feDisplacementMap in="SourceGraphic" in2="noise" scale="77" />
       </filter>
     </svg>
-  <div id="clock">00:00:00</div>
+  <div id="clock"><span id="clockText">00:00:00</span></div>
   <div id="overlay" role="region" aria-label="View switch">
     <div id="tabs" role="tablist" aria-label="Categories">
       <span id="seg-thumb" aria-hidden="true"></span>
@@ -354,13 +384,15 @@
         });
         // brief initial reveal for discoverability
         setTimeout(_showOverlay, 300);
+      
+    const clockText = document.getElementById('clockText');
 
     // Clock
     function tick() {
-      const now = new Date();
-      const t = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-      document.getElementById('clock').textContent = t;
-    }
+        const now = new Date();
+        const t = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        clockText.textContent = t;   // <-- use the span
+      }
     tick();
     setInterval(tick, 1000);
   </script>
