@@ -121,7 +121,6 @@
       z-index:2;
     }
     .tabbtn:focus{ outline:2px solid rgba(255,255,255,0.75); outline-offset:2px; border-radius:12px; }
-    .tabbtn[aria-selected="true"]{ color:#000; }
 
     /* animated thumb behind selected tab */
     #seg-thumb{
@@ -148,13 +147,20 @@
     }
 
     /* Button hover/active feedback */
-    .tabbtn:hover{ color:inherit; }
     .tabbtn:active{ transform:translateY(1px) scale(0.99); }
 
-    /* only affect non-selected tabs */
+    /* keep white on hover for non-selected tabs */
+    .tabbtn:hover { color:#fff; }
+
     .tabbtn:not([aria-selected="true"]):hover {
       background: rgba(250, 250, 250, 0.08);
-      color: inherit; /* leave text untouched */
+      color:#fff; /* <-- don't inherit */
+    }
+
+    /* selected tab stays black (even on hover) */
+    .tabbtn[aria-selected="true"],
+    .tabbtn[aria-selected="true"]:hover {
+      color:#000;
     }
 
   </style>
