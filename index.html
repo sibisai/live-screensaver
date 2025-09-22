@@ -99,7 +99,7 @@
       }
 
       /* Ensure buttons and thumb sit above layers */
-      .tabbtn, #seg-thumb{ position:relative; z-index:2; }
+      .tabbtn, #seg-thumb{ position:relative; z-index:1; }
 
       /* Optional: darker scheme tweak */
       @media (prefers-color-scheme: dark){
@@ -114,7 +114,7 @@
     }
 
     .tabbtn{
-      position:relative; z-index:1;
+      position:relative; z-index:3;
       min-width:92px; min-height:36px; padding:6px 14px;
       border:none; border-radius:12px; background:transparent;
       color:#fff; font:600 14px ui-sans-serif,system-ui; cursor:pointer; user-select:none;
@@ -137,6 +137,26 @@
     /* show-on-motion */
     .overlay-visible #overlay{ opacity:1; pointer-events:auto; }
 
+    /* Hover preview thumb (ghost) */
+    #seg-hover{
+      position:absolute; top:6px; left:0; height:36px; width:92px; border-radius:12px;
+      background:rgba(255,255,255,0.35);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,0.45);
+      transition:transform .18s ease, width .18s ease, opacity .18s ease;
+      will-change:transform,width,opacity;
+      opacity:0; pointer-events:none; z-index:1;   /* sits under buttons, above glass */
+    }
+
+    /* Button hover/active feedback */
+    .tabbtn:hover{ color:inherit; }
+    .tabbtn:active{ transform:translateY(1px) scale(0.99); }
+
+    /* only affect non-selected tabs */
+    .tabbtn:not([aria-selected="true"]):hover {
+      background: rgba(250, 250, 250, 0.08);
+      color: inherit; /* leave text untouched */
+    }
+
   </style>
 </head>
 
@@ -151,6 +171,7 @@
   <div id="overlay" role="region" aria-label="View switch">
     <div id="tabs" role="tablist" aria-label="Categories">
       <span id="seg-thumb" aria-hidden="true"></span>
+      <span id="seg-hover" aria-hidden="true"></span>
       <button id="tab-walk" class="tabbtn" role="tab" aria-selected="false">Walk</button>
       <button id="tab-home" class="tabbtn" role="tab" aria-selected="false">Home</button>
       <button id="tab-drive" class="tabbtn" role="tab" aria-selected="false">Drive</button>
@@ -389,7 +410,40 @@
         });
         // brief initial reveal for discoverability
         setTimeout(_showOverlay, 300);
-      
+
+   const hoverThumb = document.getElementById('seg-hover');
+
+function moveThumbTo(btn, el){
+  if(!btn || !el) return;
+  el.style.width = btn.offsetWidth + 'px';
+  el.style.transform = `translateX(${btn.offsetLeft}px)`;
+}
+
+// show hover ghost only on non-selected targets
+Object.values(tabs).forEach(btn=>{
+  btn?.addEventListener('mouseenter', ()=>{
+    const isSelected = btn.getAttribute('aria-selected') === 'true';
+    hoverThumb.style.opacity = isSelected ? 0 : 1;
+    moveThumbTo(btn, hoverThumb);
+  });
+  btn?.addEventListener('focus', ()=>{
+    const isSelected = btn.getAttribute('aria-selected') === 'true';
+    hoverThumb.style.opacity = isSelected ? 0 : 1;
+    moveThumbTo(btn, hoverThumb);
+  });
+});
+
+// hide ghost when leaving the tablist
+const tablist = document.getElementById('tabs');
+tablist.addEventListener('mouseleave', ()=> { hoverThumb.style.opacity = 0; });
+
+// keep ghost hidden when selection changes
+const _selectTabOrig = selectTab;
+selectTab = function(route){
+  _selectTabOrig(route);
+  hoverThumb.style.opacity = 0;
+};
+
     const clockText = document.getElementById('clockText');
 
     // Clock
