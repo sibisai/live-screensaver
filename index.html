@@ -33,32 +33,6 @@
       letter-spacing:0.5px;
       text-align:center;
       user-select:none;
-      overflow:hidden;
-      isolation:isolate;   /* needed for layers */
-      border:1px solid rgba(255,255,255,0.18);
-      box-shadow:
-        inset 1px 1px 1px rgba(255,255,255,0.55),
-        0 6px 24px rgba(0,0,0,0.35);
-    }
-
-    /* Layer 1: blur + distortion */
-    #clock::before{
-      content:"";
-      position:absolute; inset:0; border-radius:inherit;
-      -webkit-backdrop-filter:blur(6px);
-      backdrop-filter:blur(6px);
-      filter:url(#glass-distortion) saturate(120%) brightness(1.12);
-      pointer-events:none;
-      z-index:0;
-    }
-
-    /* Layer 2: translucent tint */
-    #clock::after{
-      content:"";
-      position:absolute; inset:0; border-radius:inherit;
-      background:rgba(255,255,255,0.18);
-      pointer-events:none;
-      z-index:1;
     }
 
     /* Keep text above */
@@ -67,45 +41,14 @@
       z-index:2;
     }
 
-      #tabs::before{
-        content:"";
-        position:absolute; inset:0; border-radius:inherit; z-index:0;
-        -webkit-backdrop-filter: blur(6px);  /* add this */
-        backdrop-filter: blur(6px);
-        filter: url(#glass-distortion) saturate(120%) brightness(1.12);
-        pointer-events:none;
-      }
-
-      /* Layer 2: translucent fill */
-      #tabs::after{
-        content:"";
-        position:absolute; inset:0; border-radius:inherit;
-        z-index:1;
-        background: rgba(255,255,255,0.18);
-        pointer-events:none;
-      }
-
-
-
       #tabs{
         position:relative; display:inline-flex; gap:0; padding:6px; border-radius:16px;
-        overflow:hidden;                 /* move here */
-        isolation:isolate;               /* move here */
-        border:1px solid rgba(255,255,255,0.18);
-        box-shadow:
-          inset 1px 1px 1px rgba(255,255,255,0.55),
-          0 6px 24px rgba(0,0,0,0.35);
-        /* remove the old background + backdrop-filter lines on #tabs */
+        overflow:hidden;
+        isolation:isolate;
       }
 
       /* Ensure buttons and thumb sit above layers */
       .tabbtn, #seg-thumb{ position:relative; z-index:1; }
-
-      /* Optional: darker scheme tweak */
-      @media (prefers-color-scheme: dark){
-        #tabs::after{ background: rgba(0,0,0,0.22); }
-        #clock::after{ background: rgba(0,0,0,0.22); }
-      }
 
     /* Segmented control dock (Apple-style), centered UNDER the clock */
     #overlay{
@@ -163,16 +106,51 @@
       color:#000;
     }
 
+    /* ── GlassSurface ── */
+    .glass-surface {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: opacity 0.26s ease-out;
+    }
+    .glass-surface__filter {
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      z-index: -1;
+    }
+    .glass-surface--svg {
+      background: light-dark(hsl(0 0% 100% / var(--glass-frost, 0)), hsl(0 0% 0% / var(--glass-frost, 0)));
+      backdrop-filter: var(--filter-id, url(#glass-filter)) saturate(var(--glass-saturation, 1));
+      -webkit-backdrop-filter: var(--filter-id, url(#glass-filter)) saturate(var(--glass-saturation, 1));
+      box-shadow:
+        0 0 2px 1px light-dark(color-mix(in oklch, black, transparent 85%), color-mix(in oklch, white, transparent 65%)) inset,
+        0 0 10px 4px light-dark(color-mix(in oklch, black, transparent 90%), color-mix(in oklch, white, transparent 85%)) inset,
+        0px 4px 16px rgba(17, 17, 26, 0.05),
+        0px 8px 24px rgba(17, 17, 26, 0.05),
+        0px 16px 56px rgba(17, 17, 26, 0.05),
+        0px 4px 16px rgba(17, 17, 26, 0.05) inset,
+        0px 8px 24px rgba(17, 17, 26, 0.05) inset,
+        0px 16px 56px rgba(17, 17, 26, 0.05) inset;
+    }
+    .glass-surface--fallback {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px) saturate(1.8) brightness(1.2);
+      -webkit-backdrop-filter: blur(12px) saturate(1.8) brightness(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow:
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 0 rgba(255, 255, 255, 0.1);
+    }
   </style>
 </head>
 
 <body>
-    <svg style="position:absolute; width:0; height:0;">
-      <filter id="glass-distortion">
-        <feTurbulence type="turbulence" baseFrequency="0.008" numOctaves="2" result="noise" />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="77" />
-      </filter>
-    </svg>
   <div id="clock"><span id="clockText">00:00:00</span></div>
   <div id="overlay" role="region" aria-label="View switch">
     <div id="tabs" role="tablist" aria-label="Categories">
@@ -460,6 +438,177 @@ selectTab = function(route){
       }
     tick();
     setInterval(tick, 1000);
+
+    // ── GlassSurface (ported from reactbits) ──
+    function createGlassSurface(element, options = {}) {
+      const {
+        borderRadius = 20,
+        borderWidth = 0.07,
+        brightness = 50,
+        opacity = 0.93,
+        blur = 11,
+        distortionScale = -180,
+        redOffset = 0,
+        greenOffset = 10,
+        blueOffset = 20,
+        xChannel = 'R',
+        yChannel = 'G',
+        mixBlendMode = 'difference',
+        backgroundOpacity = 0,
+        saturation = 1,
+        displace = 0,
+      } = options;
+
+      const uid = Math.random().toString(36).slice(2, 9);
+      const filterId = `gf-${uid}`;
+      const redGradId = `rg-${uid}`;
+      const blueGradId = `bg-${uid}`;
+      const svgNS = 'http://www.w3.org/2000/svg';
+
+      element.classList.add('glass-surface');
+      element.style.setProperty('--glass-frost', backgroundOpacity);
+      element.style.setProperty('--glass-saturation', saturation);
+
+      // Build SVG filter
+      const filterSvg = document.createElementNS(svgNS, 'svg');
+      filterSvg.classList.add('glass-surface__filter');
+      filterSvg.setAttribute('xmlns', svgNS);
+
+      const filter = document.createElementNS(svgNS, 'filter');
+      filter.setAttribute('id', filterId);
+      filter.setAttribute('color-interpolation-filters', 'sRGB');
+      filter.setAttribute('x', '0%');
+      filter.setAttribute('y', '0%');
+      filter.setAttribute('width', '100%');
+      filter.setAttribute('height', '100%');
+
+      const feImg = document.createElementNS(svgNS, 'feImage');
+      feImg.setAttribute('result', 'dispMap');
+      feImg.setAttribute('preserveAspectRatio', 'none');
+
+      function makeChannel(label, offset, keepFunc) {
+        const disp = document.createElementNS(svgNS, 'feDisplacementMap');
+        disp.setAttribute('in', 'SourceGraphic');
+        disp.setAttribute('in2', 'dispMap');
+        disp.setAttribute('scale', distortionScale + offset);
+        disp.setAttribute('xChannelSelector', xChannel);
+        disp.setAttribute('yChannelSelector', yChannel);
+        disp.setAttribute('result', label);
+
+        const ct = document.createElementNS(svgNS, 'feComponentTransfer');
+        ct.setAttribute('in', label);
+        ct.setAttribute('result', label + 'Only');
+        ['R', 'G', 'B'].forEach(ch => {
+          const fn = document.createElementNS(svgNS, `feFunc${ch}`);
+          fn.setAttribute('type', ch === keepFunc ? 'identity' : 'discrete');
+          if (ch !== keepFunc) fn.setAttribute('tableValues', '0');
+          ct.appendChild(fn);
+        });
+        return [disp, ct];
+      }
+
+      const [dR, cR] = makeChannel('red', redOffset, 'R');
+      const [dG, cG] = makeChannel('green', greenOffset, 'G');
+      const [dB, cB] = makeChannel('blue', blueOffset, 'B');
+
+      const blendRG = document.createElementNS(svgNS, 'feBlend');
+      blendRG.setAttribute('in', 'redOnly');
+      blendRG.setAttribute('in2', 'greenOnly');
+      blendRG.setAttribute('mode', 'screen');
+      blendRG.setAttribute('result', 'rg');
+
+      const blendRGB = document.createElementNS(svgNS, 'feBlend');
+      blendRGB.setAttribute('in', 'rg');
+      blendRGB.setAttribute('in2', 'blueOnly');
+      blendRGB.setAttribute('mode', 'screen');
+      blendRGB.setAttribute('result', 'rgb');
+
+      [feImg, dR, cR, dG, cG, dB, cB, blendRG, blendRGB].forEach(n => filter.appendChild(n));
+
+      if (displace > 0) {
+        const gb = document.createElementNS(svgNS, 'feGaussianBlur');
+        gb.setAttribute('in', 'rgb');
+        gb.setAttribute('stdDeviation', displace);
+        filter.appendChild(gb);
+      }
+
+      filterSvg.appendChild(filter);
+      element.prepend(filterSvg);
+
+      // Displacement map generator
+      function generateMap() {
+        const rect = element.getBoundingClientRect();
+        const w = rect.width || 400;
+        const h = rect.height || 200;
+        const edge = Math.min(w, h) * (borderWidth * 0.5);
+        const svg = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="${redGradId}" x1="100%" y1="0%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#0000"/><stop offset="100%" stop-color="red"/>
+            </linearGradient>
+            <linearGradient id="${blueGradId}" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#0000"/><stop offset="100%" stop-color="blue"/>
+            </linearGradient>
+          </defs>
+          <rect width="${w}" height="${h}" fill="black"/>
+          <rect width="${w}" height="${h}" rx="${borderRadius}" fill="url(#${redGradId})"/>
+          <rect width="${w}" height="${h}" rx="${borderRadius}" fill="url(#${blueGradId})" style="mix-blend-mode:${mixBlendMode}"/>
+          <rect x="${edge}" y="${edge}" width="${w - edge * 2}" height="${h - edge * 2}" rx="${borderRadius}" fill="hsl(0 0% ${brightness}% / ${opacity})" style="filter:blur(${blur}px)"/>
+        </svg>`;
+        return 'data:image/svg+xml,' + encodeURIComponent(svg);
+      }
+
+      function updateMap() {
+        const uri = generateMap();
+        feImg.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', uri);
+        feImg.setAttribute('href', uri);
+      }
+
+      // SVG filter support detection (Chromium supports backdrop-filter + url())
+      const svgOk = (() => {
+        try {
+          const t = document.createElement('div');
+          t.style.backdropFilter = 'url(#_t)';
+          return t.style.backdropFilter !== '';
+        } catch { return false; }
+      })();
+
+      if (svgOk) {
+        element.classList.add('glass-surface--svg');
+        element.style.setProperty('--filter-id', `url(#${filterId})`);
+        updateMap();
+        new ResizeObserver(() => updateMap()).observe(element);
+      } else {
+        element.classList.add('glass-surface--fallback');
+        filterSvg.remove();
+      }
+    }
+
+    createGlassSurface(document.getElementById('clock'), {
+      borderRadius: 16,
+      brightness: 50,
+      opacity: 0.93,
+      blur: 11,
+      distortionScale: -180,
+      redOffset: 0,
+      greenOffset: 10,
+      blueOffset: 20,
+      backgroundOpacity: 0,
+      saturation: 1
+    });
+
+    createGlassSurface(document.getElementById('tabs'), {
+      borderRadius: 16,
+      brightness: 50,
+      opacity: 0.93,
+      blur: 11,
+      distortionScale: -180,
+      redOffset: 0,
+      greenOffset: 10,
+      blueOffset: 20,
+      backgroundOpacity: 0,
+      saturation: 1
+    });
   </script>
 </body>
 
